@@ -17,7 +17,6 @@
 package com.palantir.gradle.gitversion;
 
 import com.google.common.base.Preconditions;
-import java.io.File;
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,15 +28,12 @@ final class VersionDetailsImpl implements VersionDetails {
     private static final Logger log = LoggerFactory.getLogger(VersionDetailsImpl.class);
     private static final int VERSION_ABBR_LENGTH = 10;
 
-    private static final String DOT_GIT_DIR_PATH = "/.git";
     private final GitVersionArgs args;
 
-    private Git nativeGitInvoker;
+    private final Git nativeGitInvoker;
 
-    VersionDetailsImpl(File gitDir, GitVersionArgs args) {
-        String gitDirStr = gitDir.toString();
-        String projectDir = gitDirStr.substring(0, gitDirStr.length() - DOT_GIT_DIR_PATH.length());
-        this.nativeGitInvoker = new Git(new File(projectDir));
+    VersionDetailsImpl(Git gitInvoker, GitVersionArgs args) {
+        this.nativeGitInvoker = gitInvoker;
         this.args = args;
     }
 

@@ -24,6 +24,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
+import org.gradle.api.Project;
+import org.gradle.process.ExecOperations;
+import org.gradle.process.internal.DefaultExecOperations;
+import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -36,10 +40,17 @@ public class VersionDetailsTest {
     private Git git;
 
     final String formattedTime = "'2005-04-07T22:13:13'";
+    private ExecOperations exec;
 
     @BeforeEach
     public void before() {
-        this.git = new Git(temporaryFolder, true);
+        Project project = ProjectBuilder.builder()
+            .withProjectDir(temporaryFolder)
+            .build();
+        this.exec =  project
+            .getProviders()
+            .of(ExecOperationsValueSource.class, spec -> {}).get();
+        this.git = new Git(exec, temporaryFolder, true);
         git.runGitCommand("init", temporaryFolder.toString());
     }
 
@@ -123,7 +134,7 @@ public class VersionDetailsTest {
     }
 
     private VersionDetails versionDetails() {
-        String gitDir = temporaryFolder.toString() + "/.git";
-        return new VersionDetailsImpl(new File(gitDir), new GitVersionArgs());
+        File gitDir = new File(temporaryFolder, "/.git");
+        return new VersionDetailsImpl(Git.fromGitDirectory(exec, gitDir), new GitVersionArgs());
     }
 }

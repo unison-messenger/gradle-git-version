@@ -1,0 +1,23 @@
+[versions]
+assertj = "3.24.2"
+spock = "2.1-groovy-3.0"
+junit = "4.13.2"
+junit5 = "5.9.3"
+jackson = "2.15.2"
+immutables = "2.9.3"
+
+
+[libraries]
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+spock-core = { module = "org.spockframework:spock-core", version.ref = "spock" }
+junit-vintage = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit5" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit5" }
+junit4 = { module = "junit:junit", version.ref = "junit" }
+jackson = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+guava = { module = "com.google.guava:guava", version = { strictly = "32.0.1-jre" }}
+immutables-value = { module = "org.immutables:value", version.ref = "immutables"}
+
+[bundles]
+
+[plugins]
+

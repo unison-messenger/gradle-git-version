@@ -2,6 +2,11 @@
 <a href="https://autorelease.general.dmz.palantir.tech/palantir/gradle-git-version"><img src="https://img.shields.io/badge/Perform%20an-Autorelease-success.svg" alt="Autorelease"></a>
 </p>
 
+Notice
+======
+This is a fork with quick workaround to support Gradle 8.1 configurations cache.
+See https://github.com/palantir/gradle-git-version/issues/713
+
 Git-Version Gradle Plugin
 =========================
 [![Build Status](https://circleci.com/gh/palantir/gradle-git-version.svg?style=shield)](https://circleci.com/gh/palantir/gradle-git-version)

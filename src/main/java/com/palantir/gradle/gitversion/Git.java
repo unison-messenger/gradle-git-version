@@ -18,33 +18,49 @@ package com.palantir.gradle.gitversion;
 
 import com.google.common.annotations.VisibleForTesting;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.gradle.process.ExecOperations;
+import org.gradle.process.ExecResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class Git {
+    private static final String DOT_GIT_DIR_PATH = "/.git";
+
     private static final Logger log = LoggerFactory.getLogger(Git.class);
 
-    private final File directory;
+    private final ExecOperations execOperations;
+    private final File worktreeDirectory;
 
-    Git(File directory) {
-        this(directory, false);
+    static Git fromGitDirectory(ExecOperations execOperations, File gitDirectory) {
+        String gitDirStr = gitDirectory.toString();
+        String projectDir = gitDirStr.substring(0, gitDirStr.length() - DOT_GIT_DIR_PATH.length());
+
+        return new Git(execOperations, new File(projectDir));
+    }
+
+    Git(ExecOperations execOperations, File worktreeDirectory) {
+        this(execOperations, worktreeDirectory, false);
     }
 
     @VisibleForTesting
-    Git(File directory, boolean testing) {
+    Git(ExecOperations execOperations, File worktreeDirectory, boolean testing) {
+        this.execOperations = execOperations;
         if (!gitCommandExists()) {
             throw new RuntimeException("Git not found in project");
         }
-        this.directory = directory;
+        this.worktreeDirectory = worktreeDirectory;
         if (testing && !checkIfUserIsSet()) {
             setGitUser();
         }
@@ -55,32 +71,22 @@ class Git {
     }
 
     private String runGitCmd(Map<String, String> envvars, String... commands) throws IOException, InterruptedException {
-        List<String> cmdInput = new ArrayList<>();
-        cmdInput.add("git");
-        cmdInput.addAll(Arrays.asList(commands));
-        ProcessBuilder pb = new ProcessBuilder(cmdInput);
-        Map<String, String> environment = pb.environment();
-        environment.putAll(envvars);
-        pb.directory(directory);
-        pb.redirectErrorStream(true);
+        ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+        ExecResult execResult = execOperations.exec(execSpec -> {
+            execSpec.setWorkingDir(worktreeDirectory);
+            execSpec.setExecutable("git");
+            execSpec.setArgs(Arrays.asList(commands));
+            execSpec.setEnvironment(envvars);
+            execSpec.setStandardOutput(stdout);
+        });
 
-        Process process = pb.start();
-        BufferedReader reader =
-                new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
-
-        StringBuilder builder = new StringBuilder();
-        String line = null;
-        while ((line = reader.readLine()) != null) {
-            builder.append(line);
-            builder.append(System.getProperty("line.separator"));
-        }
-
-        int exitCode = process.waitFor();
+        int exitCode = execResult.getExitValue();
         if (exitCode != 0) {
             return "";
+        } else {
+            String output = new String(stdout.toByteArray(), Charset.defaultCharset());
+            return output.trim();
         }
-
-        return builder.toString().trim();
     }
 
     public String runGitCommand(Map<String, String> envvar, String... command) {
@@ -176,12 +182,15 @@ class Git {
     private boolean gitCommandExists() {
         try {
             // verify that "git" command exists (throws exception if it does not)
-            Process gitVersionProcess = new ProcessBuilder("git", "version").start();
-            if (gitVersionProcess.waitFor() != 0) {
+            ExecResult execResult = execOperations.exec(execSpec -> {
+                execSpec.commandLine("git", "version");
+                execSpec.setStandardOutput(new ByteArrayOutputStream());
+            });
+            if (execResult.getExitValue() != 0) {
                 throw new IllegalStateException("error invoking git command");
             }
             return true;
-        } catch (IOException | InterruptedException | RuntimeException e) {
+        } catch (RuntimeException e) {
             log.debug("Native git command not found", e);
             return false;
         }

@@ -27,21 +27,11 @@ public final class GitVersionPlugin implements Plugin<Project> {
 
     @Override
     public void apply(final Project project) {
-        project.getRootProject().getPluginManager().apply(GitVersionRootPlugin.class);
-
-        Provider<GitVersionCacheService> serviceProvider =
-                GitVersionCacheService.getSharedGitVersionCacheService(project);
-
         // intentionally not using .getExtension() here for back-compat
-        project.getExtensions().getExtraProperties().set("gitVersion", new Closure<String>(this, this) {
-            public String doCall(Object args) {
-                return serviceProvider.get().getGitVersion(project.getProjectDir(), args);
-            }
-        });
-
         project.getExtensions().getExtraProperties().set("versionDetails", new Closure<VersionDetails>(this, this) {
             public VersionDetails doCall(Object args) {
-                return serviceProvider.get().getVersionDetails(project.getProjectDir(), args);
+                return project.getProviders()
+                    .of(GitVersionDetailsProvider.class, spec -> { spec.parameters(params -> { params.getProjectDir().set(project.getProjectDir()); }); }).get();
             }
         });
 

@@ -4,31 +4,18 @@ buildscript {
         gradlePluginPortal() { metadataSources { mavenPom(); ignoreGradleMetadataRedirection() } }
     }
     dependencies {
-        classpath 'com.palantir.jakartapackagealignment:jakarta-package-alignment:0.5.0'
-        classpath 'com.palantir.gradle.externalpublish:gradle-external-publish-plugin:1.11.0'
-        classpath 'com.palantir.javaformat:gradle-palantir-java-format:2.33.0'
         classpath 'gradle.plugin.org.inferred:gradle-processors:3.7.0'
     }
 }
 
 plugins {
     id 'com.gradle.plugin-publish' version '0.21.0'
-id 'com.palantir.git-version' version '3.0.0'
-    id 'com.palantir.idea-test-fix' version '0.1.0'
- id 'com.palantir.baseline' version '4.147.0'
-id 'com.palantir.consistent-versions' version '2.12.0'
     id 'java-gradle-plugin'
     id 'groovy'
 }
-allprojects {
-    apply plugin: 'com.palantir.jakarta-package-alignment'
-}
 
-apply plugin: 'com.palantir.external-publish-jar'
-apply plugin: 'com.palantir.java-format'
-
-group 'com.palantir.gradle.gitversion'
-version System.env.CIRCLE_TAG ?: gitVersion()
+group 'ai.storktech.gradle.gitversion'
+version System.env.CIRCLE_TAG ?: "4.0.0"
 
 repositories {
     mavenCentral() { metadataSources { mavenPom(); ignoreGradleMetadataRedirection() } }
@@ -41,30 +28,24 @@ sourceSets {
 
 dependencies {
     implementation gradleApi()
-    implementation 'com.google.guava:guava'
+    implementation libs.guava
 
     groovyImplementation localGroovy()
     groovyImplementation gradleApi()
 
     // Access code written in groovy from src/main/java sources
-    runtimeOnly configurations.groovyRuntimeClasspath
-    implementation configurations.groovyImplementation
     implementation sourceSets.groovy.output
 
-    annotationProcessor 'org.immutables:value'
-    compileOnly 'org.immutables:value::annotations'
+    annotationProcessor libs.immutables.value
+    compileOnly libs.immutables.value
 
     testImplementation gradleTestKit()
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation 'junit:junit'
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine") {
-        because 'allows JUnit 3 and JUnit 4 tests to run'
-    }
-    testImplementation 'org.assertj:assertj-core'
-    testImplementation('org.spockframework:spock-core') {
-        exclude module: 'groovy-all'
-    }
-    testImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    testImplementation libs.junit.jupiter
+    testImplementation libs.junit4
+    testRuntimeOnly libs.junit.vintage
+    testImplementation libs.assertj.core
+    testImplementation libs.spock.core
+    testImplementation libs.jackson
 }
 
 java {
@@ -75,22 +56,16 @@ tasks.withType(JavaCompile) {
     options.compilerArgs += ['-Werror', '-Xlint:deprecation']
 }
 
-pluginBundle {
-    website = 'https://github.com/palantir/gradle-git-version'
-    vcsUrl = 'https://github.com/palantir/gradle-git-version'
-    description = 'Gradle Git-Version is a plugin that generates a version for use with Gradle by calling git-describe.'
-    tags = ['git', 'version']
-
+gradlePlugin {
     plugins {
-        gitVersionPlugin {
-            id = 'com.palantir.git-version'
-            displayName = 'Palantir Gradle Git-Version'
+        create("gitVersionPlugin") {
+            id = "io.stork.gradle-git-version"
+            implementationClass = "com.palantir.gradle.gitversion.GitVersionPlugin"
         }
     }
 }
 
 // Configure the publishPlugins task
 publishPlugins.onlyIf { System.env.CIRCLE_TAG }
-tasks.publish.dependsOn publishPlugins
 project.ext.'gradle.publish.key' = System.env["GRADLE_KEY"]
 project.ext.'gradle.publish.secret' = System.env["GRADLE_SECRET"]
